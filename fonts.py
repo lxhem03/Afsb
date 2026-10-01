@@ -13,7 +13,8 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent
 
 # fonts folder is beside font.py
-FONT_DIR = PROJECT_ROOT / "fonts"
+# was:  FONT_DIR = PROJECT_ROOT / "fonts"
+FONT_DIR = PROJECT_ROOT / "font_files"
 
 # Supported font extensions
 VALID_EXTS = {".ttf", ".otf", ".woff", ".woff2"}
