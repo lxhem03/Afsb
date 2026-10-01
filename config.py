@@ -11,26 +11,26 @@ from logging.handlers import RotatingFileHandler
 # ──────────────────────────────────────────────────────────────────────────
 
 #Bot token @Botfather
-TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "")
+TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "8147541001:AAEx7i9frhH1WwXtYnip5TtBgjInN9y4HyM")
 
 #Your API ID from my.telegram.org
-APP_ID = int(os.environ.get("APP_ID", "0"))
+APP_ID = int(os.environ.get("APP_ID", "39545686"))
 
 #Your API Hash from my.telegram.org
-API_HASH = os.environ.get("API_HASH", "")
+API_HASH = os.environ.get("API_HASH", "0ed4ebf411d1dc0fc63b821a08ad889b")
 
 #Your db channel Id
-CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "0"))
+CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1003995716704"))
 
 #OWNER ID
-OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
+OWNER_ID = int(os.environ.get("OWNER_ID", "7465574522"))
 
 #Port
 PORT = os.environ.get("PORT", "8000")
 
 #Database
-DB_URI = os.environ.get("DATABASE_URL", "")
-DB_NAME = os.environ.get("DATABASE_NAME", "AG-TNX")
+DB_URI = os.environ.get("DATABASE_URL", "mongodb+srv://itzmikeyhere21:oa9L3ts4reFl3uWH@demonstration.a1im111.mongodb.net/?appName=demonstration")
+DB_NAME = os.environ.get("DATABASE_NAME", "Atwork")
 
 #Time in seconds for message Auto delete, put 0 to never delete
 TIME = int(os.environ.get("TIME", "86400"))
@@ -47,7 +47,7 @@ TG_BOT_WORKERS = int(os.environ.get("TG_BOT_WORKERS", "100"))
 START_MSG = os.environ.get("START_MESSAGE", "𝑰'𝒎 𝑳𝒖𝒇𝒇𝒚!👒 𝑨𝒏𝒅 𝑰'𝒎 𝒈𝒐𝒏𝒏𝒂 𝒇𝒊𝒏𝒅 𝒕𝒉𝒆 𝑶𝒏𝒆 𝑷𝒊𝒆𝒄𝒆 😁... 𝒖𝒉, 𝑰 𝒎𝒆𝒂𝒏 𝒉𝒆𝒍𝒑 𝒚𝒐𝒖 𝒇𝒊𝒏𝒅 𝒂𝒘𝒆𝒔𝒐𝒎𝒆 𝒂𝒏𝒊𝒎𝒆😅! 𝑪𝒉𝒆𝒄𝒌 𝒐𝒖𝒕 <a href='https://t.me/Animes_Guy'>𝗔𝗻𝗶𝗺𝗲𝘀 𝗚𝘂𝘆!!</a> 𝒂𝒏𝒅 𝒄𝒐𝒎𝒆 𝒕𝒐 𝒎𝒆 𝒂𝒈𝒂𝒊𝒏 😉 , 𝑰 𝒘𝒊𝒍𝒍 𝒑𝒓𝒐𝒗𝒊𝒅𝒆 𝒚𝒐𝒖 𝒕𝒉𝒆 𝒈𝒓𝒆𝒂𝒕𝒆𝒔𝒕 𝒔𝒕𝒐𝒓𝒚 𝒆𝒗𝒆𝒓 𝒕𝒐𝒍𝒅 𝒊𝒏 𝒕𝒉𝒆 𝒉𝒊𝒔𝒕𝒐𝒓𝒚 𝒊𝒏 𝒉𝒊𝒈𝒉 𝒒𝒖𝒂𝒍𝒊𝒕𝒚!! 🎖️𝑾𝒉𝒂𝒕 𝒂𝒓𝒆 𝒚𝒐𝒖 𝒘𝒂𝒊𝒕𝒊𝒏𝒈 𝒇𝒐𝒓??")
 try:
     ADMINS=[]
-    for x in (os.environ.get("ADMINS", "").split()):
+    for x in (os.environ.get("ADMINS", "7465574522").split()):
         ADMINS.append(int(x))
 except ValueError:
         raise Exception("Your Admins list does not contain valid integers.")
@@ -58,7 +58,7 @@ FORCE_MSG = os.environ.get("FORCE_SUB_MESSAGE", "Hᴇʟʟᴏ!\n\nTᴏ ʜᴇʟᴘ
 # Start & Fsub Pics ----------------------------------- #
 
 #Collection of pics for Bot // #Optional but atleast one pic link should be replaced if you don't want predefined links
-PICS = (os.environ.get("PICS", "")).split() #Required
+PICS = (os.environ.get("PICS", "https://files.catbox.moe/lllex3.jpg")).split() #Required
 
 # Start & Fsub Pics ----------------------------------- #
 
@@ -84,11 +84,11 @@ if OWNER_ID:
 #Channel your encoder bots upload episodes into. The bot watches this
 #channel, groups files by anime + episode, and auto-posts once every
 #quality in QUALITIES has arrived. Put 0 to leave auto-upload disabled.
-CHECK_CHANNEL = int(os.environ.get("CHECK_CHANNEL", "0"))
+CHECK_CHANNEL = int(os.environ.get("CHECK_CHANNEL", "-1004425570059"))
 
 #Channel the finished, formatted post (poster + caption + download button)
 #gets sent to. Put 0 to leave auto-upload disabled.
-DEST_CHANNEL = int(os.environ.get("DEST_CHANNEL", "0"))
+DEST_CHANNEL = int(os.environ.get("DEST_CHANNEL", "-1004478468518"))
 
 #Qualities a group must have, in this order, before it is auto-posted.
 #Edit this list if your encoders use different quality labels.
