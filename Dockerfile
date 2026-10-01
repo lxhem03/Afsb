@@ -3,7 +3,7 @@ WORKDIR /app
 
 # ffmpeg provides ffprobe, used to read audio/subtitle track languages
 # for auto-upload captions.
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg gcc \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt requirements.txt
