@@ -161,3 +161,48 @@ subscribed1 = filters.create(is_subscribed1)
 subscribed2 = filters.create(is_subscribed2)
 subscribed3 = filters.create(is_subscribed3)
 subscribed4 = filters.create(is_subscribed4)
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Auto-upload: caption parsing
+# ──────────────────────────────────────────────────────────────────────────
+# Matches captions like:
+#   "One Piece - E1170 [360p Sub]"
+#   "Jujutsu Kaisen - S02E05 [720p Dual]"
+#   "Anime Name - S2E05 [1080p Multi]"
+_CAPTION_RE = re.compile(
+    r"^\s*(?P<title>.+?)\s*-\s*(?:S(?P<season>\d{1,2}))?E(?P<episode>\d{1,4})"
+    r"\s*\[\s*(?P<quality>\d{3,4}p)\s*(?P<tag>Sub|Dual|Multi)\s*\]\s*$",
+    re.IGNORECASE,
+)
+
+
+def normalize_title(title: str) -> str:
+    """Lowercase, strip punctuation/extra spaces so caption titles and
+    /setanime titles match regardless of minor formatting differences."""
+    t = (title or "").lower().strip()
+    t = re.sub(r"[^a-z0-9 ]", "", t)
+    t = re.sub(r"\s+", " ", t).strip()
+    return t
+
+
+def parse_upload_caption(caption: str):
+    """Parse an encoder-bot caption into its anime/episode/quality parts.
+    Returns None if the caption doesn't match the expected pattern."""
+    if not caption:
+        return None
+    match = _CAPTION_RE.match(caption.strip())
+    if not match:
+        return None
+    gd = match.groupdict()
+    season = int(gd["season"]) if gd["season"] else 1
+    episode = int(gd["episode"])
+    return {
+        "title": gd["title"].strip(),
+        "normalized_title": normalize_title(gd["title"]),
+        "season": season,
+        "episode": episode,
+        "quality": gd["quality"].lower(),
+        "tag": gd["tag"].capitalize(),
+        "episode_key": f"S{season:02d}E{episode:02d}",
+    }

@@ -5,7 +5,7 @@ from pyrogram import Client
 from pyrogram.enums import ParseMode
 from config import API_HASH, APP_ID, LOGGER, TG_BOT_TOKEN, TG_BOT_WORKERS, PORT
 from config import FORCE_SUB_CHANNEL1, FORCE_SUB_CHANNEL2, FORCE_SUB_CHANNEL3, FORCE_SUB_CHANNEL4
-from config import CHANNEL_ID, ADMINS, OWNER_ID
+from config import CHANNEL_ID, ADMINS, OWNER_ID, CHECK_CHANNEL, DEST_CHANNEL
 from plugins import web_server
 from aiohttp import web
 import pyrogram.utils
@@ -87,6 +87,21 @@ class Bot(Client):
             self.LOGGER(__name__).warning(e)
             self.LOGGER(__name__).warning(f"Make sure bot is Admin in DB Channel. Current CHANNEL_ID: {CHANNEL_ID}")
             sys.exit()
+
+        # Auto-upload channels are optional — warn, don't exit, if misconfigured.
+        if CHECK_CHANNEL:
+            try:
+                await self.get_chat(CHECK_CHANNEL)
+            except Exception as e:
+                self.LOGGER(__name__).warning(e)
+                self.LOGGER(__name__).warning(f"Bot can't access CHECK_CHANNEL ({CHECK_CHANNEL}) — auto-upload watcher will stay silent. Make sure the bot is a member/admin there.")
+
+        if DEST_CHANNEL:
+            try:
+                await self.get_chat(DEST_CHANNEL)
+            except Exception as e:
+                self.LOGGER(__name__).warning(e)
+                self.LOGGER(__name__).warning(f"Bot can't access DEST_CHANNEL ({DEST_CHANNEL}) — auto-posts will fail. Make sure the bot is admin there.")
 
         self.set_parse_mode(ParseMode.HTML)
         self.LOGGER(__name__).info("Bot Running..!\n\nCreated by \nhttps://t.me/offchats")

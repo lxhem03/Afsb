@@ -16,3 +16,6 @@ pytz
 requests
 bs4
 aiofiles
+# --- For auto-upload posters ------- #
+Pillow
+numpy
