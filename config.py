@@ -111,7 +111,7 @@ MEDIAINFO_SAMPLE_MB = int(os.environ.get("MEDIAINFO_SAMPLE_MB", "20"))
 
 #TMDB API key (v3 "API Key" or v4 "Read Access Token" both work), used
 #only for Manual-mode poster image candidates in /setanime.
-TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "")
+TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "0fe07baaf344fdfbbeacff849cea0eb2")
 
 LOG_FILE_NAME = "filesharingbot.txt"
 
