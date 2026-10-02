@@ -248,9 +248,11 @@ def generate_poster(anime_data: dict, output_path: str = None) -> Image.Image:
     bg_start_y = HEADER_HEIGHT  # Background starts after header
     bg_height = CANVAS_HEIGHT - HEADER_HEIGHT  # Available height for background
     
+    # Landscape-only: deliberately NOT falling back to coverImage (portrait)
+    # here. A portrait image stretched/cropped into this full-bleed
+    # backdrop area looks wrong — better to show no backdrop at all than a
+    # distorted portrait one.
     backdrop_url = anime_data.get("images", {}).get("banner_backdrop") or anime_data.get("bannerImage")
-    if not backdrop_url and isinstance(anime_data.get("coverImage"), dict):
-         backdrop_url = anime_data.get("coverImage", {}).get("extraLarge")
     
     if backdrop_url:
         backdrop = download_image(backdrop_url)

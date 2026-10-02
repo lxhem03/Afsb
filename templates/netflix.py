@@ -169,6 +169,11 @@ def create_poster(anime_data):
     # ─── Background Image ───
     # Support both AniList and Crunchyroll data formats
     # Iterate through candidates until one successfully loads
+    # Landscape-only: the two portrait candidates (coverImage / portrait_poster)
+    # that used to sit at the end of this list have been removed on purpose.
+    # A portrait image full-bleed-cropped into this backdrop area looks
+    # wrong — if no real landscape image is available, bg stays None below
+    # and the canvas just keeps its solid base color instead.
     images = anime_data.get('images', {})
     bg_url_candidates = [
         images.get('banner_backdrop'),            # Crunchyroll backdrop (Preferred)
@@ -176,8 +181,6 @@ def create_poster(anime_data):
         anime_data.get('landscape_poster'),       # Crunchyroll flat
         anime_data.get('bannerImage'),            # AniList banner
         anime_data.get('backdrop_url'),           # Crunchyroll backdrop alt
-        (anime_data.get('coverImage', {}).get('extraLarge') if isinstance(anime_data.get('coverImage'), dict) else None),
-        images.get('portrait_poster')             # Last resort: portrait
     ]
     
     bg = None
