@@ -67,6 +67,8 @@ from io import BytesIO
 import math
 from pathlib import Path
 
+import requests
+
 from fonts import get_fonts, load_font_safe
 from poster import load_icon, colorize_icon, load_image, sanitize_description
 
@@ -130,7 +132,7 @@ def download_image(url: str) -> Image.Image:
         headers = {
             "Accept": "image/jpeg,image/png,image/webp,*/*;q=0.8"
         }
-        response = requests.get(url, headers=headers, timeout=15, impersonate="chrome")
+        response = requests.get(url, headers=headers, timeout=15)
         response.raise_for_status()
         return Image.open(BytesIO(response.content)).convert('RGBA')
     except Exception as e:
