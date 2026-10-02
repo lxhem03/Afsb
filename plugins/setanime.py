@@ -102,17 +102,29 @@ async def setanime_cmd(client: Client, message: Message):
         summary += f", TMDB {tmdb_id}" + (f" S{season}" if season else "")
     await message.reply(summary + "\n\nNow let's make its poster.")
 
+    # Everything from here on hits the network (AniList, TMDB, image
+    # downloads) or waits on the admin. Any uncaught exception used to just
+    # die silently server-side — wrapping it all so a failure always gets
+    # reported back to the chat instead of the flow just stopping with no
+    # explanation.
+    try:
+        await _run_setanime_flow(client, message, title, anilist_id, tmdb_id, season, normalized)
+    except asyncio.TimeoutError:
+        await message.reply("Timed out. Run /setanime again.")
+    except Exception as e:
+        logger.error(f"[setanime] flow crashed for {title!r}: {e}", exc_info=True)
+        await message.reply(f"Something went wrong and the flow stopped:\n<code>{e}</code>")
+
+
+async def _run_setanime_flow(client: Client, message: Message, title: str,
+                              anilist_id: int, tmdb_id, season, normalized: str):
     # ── Step 1: poster format ────────────────────────────────────────────
     fmt_buttons = InlineKeyboardMarkup([[
         InlineKeyboardButton(label, callback_data=f"setani_fmt_{code}")
         for code, (label, _) in TEMPLATES.items()
     ]])
     step1 = await message.reply("Select poster format:", reply_markup=fmt_buttons)
-    try:
-        q = await _wait_for_callback(message.chat.id)
-    except asyncio.TimeoutError:
-        await step1.edit("Timed out. Run /setanime again.")
-        return
+    q = await _wait_for_callback(message.chat.id)
     fmt = q.data.split("setani_fmt_", 1)[1]
     fmt_label = TEMPLATES[fmt][0]
     await step1.edit(f"Format: <b>{fmt_label}</b>")
@@ -123,15 +135,14 @@ async def setanime_cmd(client: Client, message: Message):
         InlineKeyboardButton("Manual", callback_data="setani_mode_manual"),
     ]])
     step2 = await message.reply("Auto (AniList image) or Manual (pick from TMDB)?", reply_markup=mode_buttons)
-    try:
-        q = await _wait_for_callback(message.chat.id)
-    except asyncio.TimeoutError:
-        await step2.edit("Timed out. Run /setanime again.")
-        return
+    q = await _wait_for_callback(message.chat.id)
     mode = "manual" if q.data == "setani_mode_manual" else "auto"
     await step2.edit(f"Mode: <b>{mode.capitalize()}</b>")
 
-    al_data = await asyncio.to_thread(get_anime_data, str(anilist_id))
+    try:
+        al_data = await asyncio.to_thread(get_anime_data, str(anilist_id))
+    except Exception as e:
+        raise RuntimeError(f"AniList lookup failed for id {anilist_id}: {e}") from e
     if not al_data:
         await message.reply("Couldn't fetch this anime from AniList — check the id. Aborting.")
         return
@@ -231,11 +242,7 @@ async def setanime_cmd(client: Client, message: Message):
     ]])
     preview = await message.reply_photo(poster_bytes, caption="Use this poster?", reply_markup=confirm_buttons)
 
-    try:
-        q = await _wait_for_callback(message.chat.id)
-    except asyncio.TimeoutError:
-        await message.reply("Timed out. Run /setanime again.")
-        return
+    q = await _wait_for_callback(message.chat.id)
 
     if q.data == "setani_conf_yes":
         file_id = preview.photo.file_id
