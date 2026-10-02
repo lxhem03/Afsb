@@ -176,6 +176,14 @@ async def _run_setanime_flow(client: Client, message: Message, title: str,
                     if not ok:
                         await reply.reply("Couldn't download that link — falling back to Auto.")
                         mode = "auto"
+                    elif fmt in ("crun", "net") and not is_landscape:
+                        # Crunchyroll/Netflix only render the backdrop — a
+                        # portrait link here would be downloaded for nothing.
+                        await reply.reply(
+                            "That image is portrait, but this format only uses a "
+                            "landscape backdrop — send a landscape link, or /skip to fall back to Auto."
+                        )
+                        mode = "auto"
                     else:
                         if is_landscape:
                             backdrop_url = text
@@ -193,9 +201,19 @@ async def _run_setanime_flow(client: Client, message: Message, title: str,
 
         if mode == "manual" and not direct_image_assigned:
             images = await asyncio.to_thread(get_tv_images, tmdb_id, season)
-            candidates = (images.get("posters") or [])[:8]
+
+            # AniList format uses the portrait cover — show poster candidates.
+            # Crunchyroll/Netflix only ever render the landscape backdrop
+            # (see templates/netflix.py and templates/crunchyroll_poster.py),
+            # so for those, show backdrop candidates instead — otherwise
+            # you'd be picking from images that never actually appear.
+            wants_backdrop = fmt in ("crun", "net")
+            candidate_key = "backdrops" if wants_backdrop else "posters"
+            candidate_label = "backdrop" if wants_backdrop else "poster"
+            candidates = (images.get(candidate_key) or [])[:8]
+
             if not candidates:
-                await message.reply("No TMDB posters found for that id/season — falling back to Auto.")
+                await message.reply(f"No TMDB {candidate_label}s found for that id/season — falling back to Auto.")
                 mode = "auto"
             else:
                 sent = []
@@ -206,7 +224,7 @@ async def _run_setanime_flow(client: Client, message: Message, title: str,
                     try:
                         m = await client.send_photo(
                             message.chat.id, url,
-                            caption=f"Poster option {idx + 1}/{len(candidates)}",
+                            caption=f"{candidate_label.capitalize()} option {idx + 1}/{len(candidates)}",
                             reply_markup=kb,
                         )
                         sent.append(m)
@@ -216,13 +234,14 @@ async def _run_setanime_flow(client: Client, message: Message, title: str,
                 try:
                     q = await _wait_for_callback(message.chat.id, timeout=PICKER_TIMEOUT)
                 except asyncio.TimeoutError:
-                    await message.reply("Timed out picking a poster — falling back to Auto.")
+                    await message.reply(f"Timed out picking a {candidate_label} — falling back to Auto.")
                 else:
                     picked_idx = int(q.data.split("setani_pick_", 1)[1])
-                    poster_url = candidates[picked_idx]
-                    backdrop_candidates = images.get("backdrops") or []
-                    if backdrop_candidates:
-                        backdrop_url = backdrop_candidates[0]
+                    picked_url = candidates[picked_idx]
+                    if wants_backdrop:
+                        backdrop_url = picked_url
+                    else:
+                        poster_url = picked_url
 
                 for m in sent:
                     try:
