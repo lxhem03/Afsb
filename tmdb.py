@@ -42,12 +42,17 @@ def parse_tmdb_id(text: str):
     return None
 
 
-def _auth_kwargs(api_key: str):
+def _request_kwargs(api_key: str):
     # TMDB has two key formats: the classic v3 "API Key" (query param) and
     # the newer v4 "Read Access Token" (a long JWT, used as a Bearer token).
+    # include_image_language=en,null is required to get backdrops/posters
+    # back at all in most cases — without it TMDB silently filters nearly
+    # everything out.
+    params = {"language": "en-US", "include_image_language": "en,null"}
     if api_key and len(api_key) > 100:
-        return {"headers": {"Authorization": f"Bearer {api_key}"}}
-    return {"params": {"api_key": api_key}}
+        return {"headers": {"Authorization": f"Bearer {api_key}"}, "params": params}
+    params["api_key"] = api_key
+    return {"params": params}
 
 
 def get_tv_images(tmdb_id: int, season: int = None, api_key: str = None):
@@ -63,10 +68,10 @@ def get_tv_images(tmdb_id: int, season: int = None, api_key: str = None):
     if not key or not tmdb_id:
         return result
 
-    auth = _auth_kwargs(key)
+    req_kwargs = _request_kwargs(key)
 
     try:
-        r = requests.get(f"{TMDB_API_URL}/tv/{tmdb_id}/images", timeout=_TIMEOUT, **auth)
+        r = requests.get(f"{TMDB_API_URL}/tv/{tmdb_id}/images", timeout=_TIMEOUT, **req_kwargs)
         r.raise_for_status()
         data = r.json()
         result["posters"] = [TMDB_IMG_BASE + p["file_path"] for p in data.get("posters", [])]
@@ -78,7 +83,7 @@ def get_tv_images(tmdb_id: int, season: int = None, api_key: str = None):
         try:
             r = requests.get(
                 f"{TMDB_API_URL}/tv/{tmdb_id}/season/{season}/images",
-                timeout=_TIMEOUT, **auth,
+                timeout=_TIMEOUT, **req_kwargs,
             )
             r.raise_for_status()
             data = r.json()
