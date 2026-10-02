@@ -24,6 +24,18 @@ logger = logging.getLogger(__name__)
 
 DOWNLOAD_BUTTON_TEXT = "‎✨ 𝙳𝚘𝚠𝚗𝚕𝚘𝚊𝚍 ✨"
 
+# Sent to CHANNEL_ID right after a group's 4 files finish copying, so the
+# files channel visually separates one anime's batch from the next.
+BATCH_END_STICKER = "CAACAgUAAxkBAALNfGq_SRMFVGjPdyac9Bm3fvGum4YeAAIGEgACUMWAVewXQ86N25rRPQQ"
+
+# Two groups finishing around the same time both call build_and_post()
+# concurrently. If their copy_message calls interleave, the message IDs in
+# CHANNEL_ID stop being contiguous per-anime and the batch link breaks (this
+# is exactly what caused One Piece / Dragons of God to interleave). This
+# lock forces only one group's files to be copied into CHANNEL_ID at a
+# time — posting is serialized, but links stay correct.
+_channel_copy_lock = asyncio.Lock()
+
 
 async def _copy_with_retry(client, **kwargs):
     try:
@@ -46,29 +58,40 @@ async def build_and_post(client, group: dict):
 
     # 1) Copy the four quality files into the DB channel, in fixed order,
     #    back-to-back, so the resulting message IDs are contiguous and the
-    #    existing get-{first}-{last} batch-link format just works.
-    copied_messages = []
-    for quality in QUALITIES:
-        info = quality_info.get(quality)
-        if not info:
-            logger.error(f"[post_builder] missing quality {quality} for {normalized_title} {group.get('episode_key')} — aborting")
-            return
-        copied = await _copy_with_retry(
-            client,
-            chat_id=CHANNEL_ID,
-            from_chat_id=info["chat_id"],
-            message_id=info["message_id"],
-            disable_notification=True,
-        )
-        copied_messages.append(copied)
-        await asyncio.sleep(1)  # be gentle on flood limits between copies
+    #    existing get-{first}-{last} batch-link format just works. Locked
+    #    so a second group can't interleave its copies into the middle of
+    #    this one's range (see _channel_copy_lock above).
+    async with _channel_copy_lock:
+        copied_messages = []
+        for quality in QUALITIES:
+            info = quality_info.get(quality)
+            if not info:
+                logger.error(f"[post_builder] missing quality {quality} for {normalized_title} {group.get('episode_key')} — aborting")
+                return
+            copied = await _copy_with_retry(
+                client,
+                chat_id=CHANNEL_ID,
+                from_chat_id=info["chat_id"],
+                message_id=info["message_id"],
+                disable_notification=True,
+            )
+            copied_messages.append(copied)
+            await asyncio.sleep(1)  # be gentle on flood limits between copies
 
-    first_id = copied_messages[0].id
-    last_id = copied_messages[-1].id
-    converted_first = first_id * abs(client.db_channel.id)
-    converted_last = last_id * abs(client.db_channel.id)
-    base64_string = await encode(f"get-{converted_first}-{converted_last}")
-    link = f"https://t.me/{client.username}?start={base64_string}"
+        first_id = copied_messages[0].id
+        last_id = copied_messages[-1].id
+        converted_first = first_id * abs(client.db_channel.id)
+        converted_last = last_id * abs(client.db_channel.id)
+        base64_string = await encode(f"get-{converted_first}-{converted_last}")
+        link = f"https://t.me/{client.username}?start={base64_string}"
+
+        # Visually separate this batch from whatever comes next in the
+        # files channel, while we still hold the lock (so it can't land
+        # between another group's 4 files either).
+        try:
+            await client.send_sticker(CHANNEL_ID, BATCH_END_STICKER)
+        except Exception as e:
+            logger.warning(f"[post_builder] failed to send batch-end sticker: {e}")
 
     # 2) Detect audio/subtitle languages from just one of the copied files
     #    (all qualities share the same source encode).

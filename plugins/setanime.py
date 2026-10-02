@@ -3,7 +3,10 @@
 import re
 import asyncio
 import logging
+from io import BytesIO
 
+import requests
+from PIL import Image
 from pyrogram import filters, Client
 from pyrogram.types import (
     Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton,
@@ -32,6 +35,22 @@ _SETANIME_ARGS_RE = re.compile(
     r"(?:\s+-s\s+(?P<season>\d+))?\s*$",
     re.IGNORECASE,
 )
+
+
+def _probe_image_orientation(url: str, timeout: int = 15):
+    """Downloads a direct image link and reports whether it's landscape or
+    portrait, so it can be routed to the right poster slot automatically.
+    Returns (is_ok, is_landscape). is_ok is False if the download/decode
+    failed (bad link, not an image, etc.)."""
+    try:
+        r = requests.get(url, timeout=timeout)
+        r.raise_for_status()
+        img = Image.open(BytesIO(r.content))
+        w, h = img.size
+        return True, w >= h
+    except Exception as e:
+        logger.warning(f"[setanime] couldn't probe direct image link {url!r}: {e}")
+        return False, None
 
 
 async def _wait_for_callback(chat_id: int, timeout: int = CALLBACK_TIMEOUT) -> CallbackQuery:
@@ -123,12 +142,14 @@ async def setanime_cmd(client: Client, message: Message):
     # ── Manual mode: get a TMDB id if we don't have one, then let the
     #    admin pick an image from the candidates ─────────────────────────
     if mode == "manual":
+        direct_image_assigned = False
         if not tmdb_id:
             try:
                 reply = await client.ask(
                     chat_id=message.chat.id,
-                    text="Manual mode needs a TMDB id or URL. Send it now, "
-                         "or send /skip to fall back to Auto (AniList image).",
+                    text="Manual mode needs an image source. Send a TMDB id/URL, "
+                         "a direct image download link, or /skip to fall back to "
+                         "Auto (AniList image).",
                     filters=filters.text, timeout=PICKER_TIMEOUT,
                 )
             except asyncio.TimeoutError:
@@ -136,15 +157,30 @@ async def setanime_cmd(client: Client, message: Message):
                 mode = "auto"
             else:
                 text = (reply.text or "").strip()
+                looks_like_tmdb = parse_tmdb_id(text) is not None
                 if text == "/skip":
                     mode = "auto"
+                elif text.lower().startswith(("http://", "https://")) and not looks_like_tmdb:
+                    ok, is_landscape = await asyncio.to_thread(_probe_image_orientation, text)
+                    if not ok:
+                        await reply.reply("Couldn't download that link — falling back to Auto.")
+                        mode = "auto"
+                    else:
+                        if is_landscape:
+                            backdrop_url = text
+                        else:
+                            poster_url = text
+                        direct_image_assigned = True
+                        await reply.reply(
+                            f"Got it — using that as the {'landscape/backdrop' if is_landscape else 'portrait/cover'} image."
+                        )
                 else:
                     tmdb_id = parse_tmdb_id(text)
                     if not tmdb_id:
                         await reply.reply("Couldn't read a TMDB id from that — falling back to Auto.")
                         mode = "auto"
 
-        if mode == "manual":
+        if mode == "manual" and not direct_image_assigned:
             images = await asyncio.to_thread(get_tv_images, tmdb_id, season)
             candidates = (images.get("posters") or [])[:8]
             if not candidates:
